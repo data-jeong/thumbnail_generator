@@ -3,27 +3,21 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter, ImageEnhance
 import io
 import numpy as np
 from datetime import datetime
-import cv2
 
 def get_dominant_color(image):
     """이미지의 주요 색상을 추출"""
     # 이미지를 작은 크기로 리사이즈하여 처리 속도 향상
     small_image = image.resize((50, 50))
-    # 이미지의 모든 픽셀 색상 분석
-    pixels = np.float32(small_image).reshape(-1, 3)
-    # 가장 많이 사용된 색상 추출
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, .1)
-    flags = cv2.KMEANS_RANDOM_CENTERS
-    _, labels, palette = cv2.kmeans(pixels, 5, None, criteria, 10, flags)
-    _, counts = np.unique(labels, return_counts=True)
-    dominant_color = tuple(map(int, palette[np.argmax(counts)]))
-    return dominant_color
+    # numpy 배열로 변환
+    img_array = np.array(small_image)
+    # 픽셀을 2D로 재구성
+    pixels = img_array.reshape(-1, 3)
+    # 각 채널의 중앙값 계산
+    median_color = np.median(pixels, axis=0).astype(int)
+    return tuple(median_color)
 
 def create_background(image, target_width, target_height):
     """원본 이미지를 기반으로 배경 생성"""
-    # 이미지의 주요 색상 추출
-    dominant_color = get_dominant_color(image)
-    
     # 블러 처리된 배경 생성
     background = image.copy()
     # 배경 이미지를 타겟 크기보다 크게 리사이즈
@@ -43,7 +37,9 @@ def create_background(image, target_width, target_height):
         new_height = int(new_width / img_ratio)
     
     background = background.resize((new_width, new_height), Image.Resampling.LANCZOS)
-    background = background.filter(ImageFilter.GaussianBlur(radius=30))
+    # 더 강한 블러 효과 적용
+    for _ in range(3):  # 여러 번 블러 적용
+        background = background.filter(ImageFilter.GaussianBlur(radius=10))
     
     # 배경 이미지 중앙 크롭
     left = (new_width - target_width) // 2
@@ -52,7 +48,7 @@ def create_background(image, target_width, target_height):
     
     # 배경 이미지의 밝기 조정
     enhancer = ImageEnhance.Brightness(background)
-    background = enhancer.enhance(0.6)  # 40% 어둡게
+    background = enhancer.enhance(0.5)  # 50% 어둡게
     
     return background
 

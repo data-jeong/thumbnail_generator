@@ -1,51 +1,46 @@
-# Tech Blog Thumbnail Generator
+# 블로그/SNS 썸네일 생성기 🎨
 
-블로그 썸네일을 자동으로 생성하는 Streamlit 애플리케이션입니다.
+블로그나 SNS에 최적화된 썸네일을 자동으로 생성해주는 도구입니다. 티스토리 블로그와 인스타그램 포스트에 맞는 이미지 크기로 자동 변환해줍니다.
 
-## 기능
+## 주요 기능
 
-- TISTORY (1200x600) 및 Instagram (1080x1080) 썸네일 생성
-- 커스텀 제목, 부제목, 기술 스택 입력
-- 그라데이션 배경
-- PNG 형식으로 다운로드
+- 티스토리(1200x600)와 인스타그램(1080x1080) 형식 지원
+- 이미지 비율 자동 조정
+- 가장자리 색상을 활용한 자연스러운 여백 채우기
+- 선택적 그라데이션 효과
 
 ## 설치 방법
 
 1. 저장소 클론
 ```bash
-git clone <repository-url>
-cd thumbnail_generator
+git clone [repository-url]
+cd thumbnail-generator
 ```
 
-2. 가상환경 생성 및 활성화
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
-```
-
-3. 의존성 설치
+2. 필요한 패키지 설치
 ```bash
 pip install -r requirements.txt
 ```
 
-## 실행 방법
+## 사용 방법
 
+1. 프로그램 실행:
 ```bash
 streamlit run app.py
 ```
 
-## 사용 방법
+2. 웹 브라우저에서 다음 단계를 따릅니다:
+   - 원하는 플랫폼 선택 (티스토리/인스타그램)
+   - 이미지 파일 업로드
+   - 그라데이션 효과 적용 여부 선택
+   - "썸네일 생성" 버튼 클릭
+   - 생성된 썸네일 다운로드
 
-1. 플랫폼 선택 (TISTORY 또는 Instagram)
-2. 제목과 부제목 입력
-3. 기술 스택 입력 (한 줄에 하나씩)
-4. 기간 정보 입력
-5. "썸네일 생성" 버튼 클릭
-6. 생성된 썸네일 확인 및 다운로드
+## 요구사항
 
-## 주의사항
+- Python 3.8 이상
+- requirements.txt에 명시된 패키지들
 
-- 기본 시스템 폰트를 사용합니다 (arial.ttf)
-- 이미지 생성에는 약간의 시간이 소요될 수 있습니다
-- 한글 텍스트가 깨질 경우 시스템에 한글 폰트 설치가 필요할 수 있습니다 
+## 라이선스
+
+MIT License 

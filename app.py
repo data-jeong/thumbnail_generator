@@ -4,9 +4,21 @@ import io
 import numpy as np
 from datetime import datetime
 
-def get_edge_color(image, position='top'):
-    """이미지 가장자리의 대표 색상을 추출합니다."""
+def get_edge_color(image, position='all'):
+    """이미지 가장자리의 대표 색상을 추출"""
     img_array = np.array(image)
+    
+    if position == 'all':
+        # 모든 가장자리 픽셀의 평균 색상
+        edges = np.concatenate([
+            img_array[0, :],  # top edge
+            img_array[-1, :],  # bottom edge
+            img_array[:, 0],  # left edge
+            img_array[:, -1]  # right edge
+        ])
+        median_color = np.median(edges, axis=0).astype(int)
+        return tuple(median_color)
+    
     if position == 'top':
         edge_pixels = img_array[0, :, :]
     elif position == 'bottom':
@@ -16,11 +28,11 @@ def get_edge_color(image, position='top'):
     else:  # right
         edge_pixels = img_array[:, -1, :]
     
-    # 가장자리 픽셀들의 중앙값을 계산하여 대표 색상으로 사용
     median_color = np.median(edge_pixels, axis=0).astype(int)
     return tuple(median_color)
 
-def resize_and_pad_image(image, target_width, target_height):
+def resize_and_pad_image(image, target_width, target_height, is_tistory=False):
+    """이미지 리사이징 및 패딩 처리"""
     # Calculate aspect ratios
     target_ratio = target_width / target_height
     img_ratio = image.width / image.height
@@ -28,64 +40,73 @@ def resize_and_pad_image(image, target_width, target_height):
     # Convert image to RGBA if it isn't already
     image = image.convert('RGBA')
     
-    # Resize image maintaining aspect ratio
-    if img_ratio > target_ratio:
-        # Image is wider than target
-        new_height = int(target_width / img_ratio)
-        resized_img = image.resize((target_width, new_height), Image.Resampling.LANCZOS)
-        # Get colors from top and bottom edges
-        top_color = get_edge_color(resized_img, 'top')
-        bottom_color = get_edge_color(resized_img, 'bottom')
-        # Create new image with edge colors
-        padded_img = Image.new('RGBA', (target_width, target_height), top_color)
-        # Calculate padding
-        padding = (target_height - new_height) // 2
-        # Paste resized image in the middle
-        padded_img.paste(resized_img, (0, padding))
-        # Fill bottom part with bottom edge color
-        bottom_part = Image.new('RGBA', (target_width, padding), bottom_color)
-        padded_img.paste(bottom_part, (0, target_height - padding))
+    if is_tistory:
+        # 티스토리의 경우 더 넓은 뷰를 보여주기 위해 이미지를 약간 축소
+        margin_percent = 0.1  # 10% 여백
+        content_width = int(target_width * (1 - 2 * margin_percent))
+        content_height = int(target_height * (1 - 2 * margin_percent))
+        
+        # 이미지를 먼저 컨텐츠 크기에 맞게 리사이징
+        if img_ratio > target_ratio:
+            new_height = int(content_width / img_ratio)
+            resized_img = image.resize((content_width, new_height), Image.Resampling.LANCZOS)
+        else:
+            new_width = int(content_height * img_ratio)
+            resized_img = image.resize((new_width, content_height), Image.Resampling.LANCZOS)
+        
+        # 최종 크기의 새 이미지 생성
+        final_img = Image.new('RGBA', (target_width, target_height), (255, 255, 255, 0))
+        
+        # 리사이즈된 이미지를 중앙에 배치
+        paste_x = (target_width - resized_img.width) // 2
+        paste_y = (target_height - resized_img.height) // 2
+        
+        # 가장자리 색상 추출 및 배경 채우기
+        edge_color = get_edge_color(resized_img)
+        background = Image.new('RGBA', (target_width, target_height), edge_color)
+        final_img = Image.alpha_composite(background, final_img)
+        
+        # 리사이즈된 이미지 붙이기
+        final_img.paste(resized_img, (paste_x, paste_y), resized_img)
+        return final_img
     else:
-        # Image is taller than target
-        new_width = int(target_height * img_ratio)
-        resized_img = image.resize((new_width, target_height), Image.Resampling.LANCZOS)
-        # Get colors from left and right edges
-        left_color = get_edge_color(resized_img, 'left')
-        right_color = get_edge_color(resized_img, 'right')
-        # Create new image with edge colors
-        padded_img = Image.new('RGBA', (target_width, target_height), left_color)
-        # Calculate padding
-        padding = (target_width - new_width) // 2
-        # Paste resized image in the middle
-        padded_img.paste(resized_img, (padding, 0))
-        # Fill right part with right edge color
-        right_part = Image.new('RGBA', (padding, target_height), right_color)
-        padded_img.paste(right_part, (target_width - padding, 0))
-    
-    return padded_img
+        # 인스타그램 등 다른 형식은 기존 로직 유지
+        if img_ratio > target_ratio:
+            new_height = int(target_width / img_ratio)
+            resized_img = image.resize((target_width, new_height), Image.Resampling.LANCZOS)
+            padding = (target_height - new_height) // 2
+            edge_color = get_edge_color(resized_img, 'top')
+            padded_img = Image.new('RGBA', (target_width, target_height), edge_color)
+            padded_img.paste(resized_img, (0, padding), resized_img)
+        else:
+            new_width = int(target_height * img_ratio)
+            resized_img = image.resize((new_width, target_height), Image.Resampling.LANCZOS)
+            padding = (target_width - new_width) // 2
+            edge_color = get_edge_color(resized_img, 'left')
+            padded_img = Image.new('RGBA', (target_width, target_height), edge_color)
+            padded_img.paste(resized_img, (padding, 0), resized_img)
+        return padded_img
 
-def create_thumbnail(uploaded_image, width, height, add_gradient=True):
-    # Process uploaded image
+def create_thumbnail(uploaded_image, width, height, add_gradient=True, is_tistory=False):
+    """썸네일 생성"""
     if uploaded_image:
         img = Image.open(uploaded_image)
-        img = resize_and_pad_image(img, width, height)
+        img = resize_and_pad_image(img, width, height, is_tistory)
     else:
-        img = Image.new('RGB', (width, height), color='white')
+        img = Image.new('RGBA', (width, height), (255, 255, 255, 255))
     
-    # Add gradient overlay if requested
     if add_gradient:
+        # 반투명 그라데이션 오버레이 생성
         gradient = np.array([
             [
-                (33 - int(33 * y/height), 150 - int(50 * y/height), 243 - int(83 * y/height), int(128 * (1 - y/height)))
+                (33 - int(33 * y/height), 150 - int(50 * y/height), 243 - int(83 * y/height), int(100 * (1 - y/height)))
                 for x in range(width)
             ]
             for y in range(height)
         ], dtype=np.uint8)
         gradient_img = Image.fromarray(gradient, 'RGBA')
         
-        # Convert base image to RGBA
-        img = img.convert('RGBA')
-        # Overlay gradient
+        # 그라데이션 오버레이 적용
         img = Image.alpha_composite(img, gradient_img)
     
     return img
@@ -110,12 +131,13 @@ def main():
         add_gradient = st.checkbox("그라데이션 효과 추가", value=True)
         
         if st.button("썸네일 생성"):
-            if platform == "TISTORY (1200x600)":
+            is_tistory = platform.startswith("TISTORY")
+            if is_tistory:
                 width, height = 1200, 600
             else:  # Instagram
                 width, height = 1080, 1080
                 
-            thumbnail = create_thumbnail(uploaded_file, width, height, add_gradient)
+            thumbnail = create_thumbnail(uploaded_file, width, height, add_gradient, is_tistory)
             
             # Convert to bytes
             img_bytes = io.BytesIO()
@@ -123,7 +145,7 @@ def main():
             
             # Generate filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            platform_name = "tistory" if platform.startswith("TISTORY") else "instagram"
+            platform_name = "tistory" if is_tistory else "instagram"
             filename = f"thumbnail_{platform_name}_{timestamp}.png"
             
             with col2:

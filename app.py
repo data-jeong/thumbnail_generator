@@ -1,5 +1,5 @@
 import streamlit as st
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter
 import io
 import numpy as np
 from datetime import datetime
@@ -31,46 +31,68 @@ def get_edge_color(image, position='all'):
     median_color = np.median(edge_pixels, axis=0).astype(int)
     return tuple(median_color)
 
+def create_blur_background(image, target_width, target_height):
+    """이미지를 블러 처리하여 배경으로 사용"""
+    # 이미지를 타겟 크기보다 크게 리사이즈
+    scale = 1.2
+    blur_width = int(target_width * scale)
+    blur_height = int(target_height * scale)
+    
+    # 비율 유지하면서 리사이즈
+    img_ratio = image.width / image.height
+    target_ratio = blur_width / blur_height
+    
+    if img_ratio > target_ratio:
+        new_width = blur_width
+        new_height = int(new_width / img_ratio)
+    else:
+        new_height = blur_height
+        new_width = int(new_height * img_ratio)
+    
+    # 이미지 리사이즈 및 블러 처리
+    background = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    background = background.filter(ImageFilter.GaussianBlur(radius=10))
+    
+    # 중앙 부분 크롭
+    left = (new_width - target_width) // 2
+    top = (new_height - target_height) // 2
+    background = background.crop((left, top, left + target_width, top + target_height))
+    
+    return background
+
 def resize_and_pad_image(image, target_width, target_height, is_tistory=False):
     """이미지 리사이징 및 패딩 처리"""
-    # Calculate aspect ratios
-    target_ratio = target_width / target_height
-    img_ratio = image.width / image.height
-    
     # Convert image to RGBA if it isn't already
     image = image.convert('RGBA')
     
     if is_tistory:
-        # 티스토리의 경우 더 넓은 뷰를 보여주기 위해 이미지를 약간 축소
-        margin_percent = 0.1  # 10% 여백
-        content_width = int(target_width * (1 - 2 * margin_percent))
-        content_height = int(target_height * (1 - 2 * margin_percent))
+        # 티스토리 썸네일용 최적화
+        img_ratio = image.width / image.height
+        target_ratio = target_width / target_height
         
-        # 이미지를 먼저 컨텐츠 크기에 맞게 리사이징
+        # 이미지 리사이징 (약간 더 크게)
         if img_ratio > target_ratio:
-            new_height = int(content_width / img_ratio)
-            resized_img = image.resize((content_width, new_height), Image.Resampling.LANCZOS)
+            # 이미지가 더 넓은 경우
+            new_height = target_height
+            new_width = int(new_height * img_ratio)
         else:
-            new_width = int(content_height * img_ratio)
-            resized_img = image.resize((new_width, content_height), Image.Resampling.LANCZOS)
+            # 이미지가 더 긴 경우
+            new_width = target_width
+            new_height = int(new_width / img_ratio)
         
-        # 최종 크기의 새 이미지 생성
-        final_img = Image.new('RGBA', (target_width, target_height), (255, 255, 255, 0))
+        resized_img = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
         
-        # 리사이즈된 이미지를 중앙에 배치
-        paste_x = (target_width - resized_img.width) // 2
-        paste_y = (target_height - resized_img.height) // 2
+        # 중앙 부분 크롭
+        left = (new_width - target_width) // 2
+        top = (new_height - target_height) // 2
+        cropped_img = resized_img.crop((left, top, left + target_width, top + target_height))
         
-        # 가장자리 색상 추출 및 배경 채우기
-        edge_color = get_edge_color(resized_img)
-        background = Image.new('RGBA', (target_width, target_height), edge_color)
-        final_img = Image.alpha_composite(background, final_img)
-        
-        # 리사이즈된 이미지 붙이기
-        final_img.paste(resized_img, (paste_x, paste_y), resized_img)
-        return final_img
+        return cropped_img
     else:
-        # 인스타그램 등 다른 형식은 기존 로직 유지
+        # 인스타그램 등 다른 형식
+        img_ratio = image.width / image.height
+        target_ratio = target_width / target_height
+        
         if img_ratio > target_ratio:
             new_height = int(target_width / img_ratio)
             resized_img = image.resize((target_width, new_height), Image.Resampling.LANCZOS)
@@ -95,7 +117,7 @@ def create_thumbnail(uploaded_image, width, height, add_gradient=True, is_tistor
     else:
         img = Image.new('RGBA', (width, height), (255, 255, 255, 255))
     
-    if add_gradient:
+    if add_gradient and not is_tistory:  # 티스토리 썸네일에는 그라데이션 효과 제외
         # 반투명 그라데이션 오버레이 생성
         gradient = np.array([
             [
@@ -124,7 +146,7 @@ def main():
         
         platform = st.selectbox(
             "플랫폼 선택",
-            ["TISTORY (1200x600)", "Instagram (1080x1080)"]
+            ["TISTORY (230x300)", "Instagram (1080x1080)"]
         )
         
         uploaded_file = st.file_uploader("이미지 업로드", type=['png', 'jpg', 'jpeg'])
@@ -133,7 +155,7 @@ def main():
         if st.button("썸네일 생성"):
             is_tistory = platform.startswith("TISTORY")
             if is_tistory:
-                width, height = 1200, 600
+                width, height = 230, 300
             else:  # Instagram
                 width, height = 1080, 1080
                 
@@ -150,7 +172,11 @@ def main():
             
             with col2:
                 st.subheader("생성된 썸네일")
-                st.image(thumbnail, use_column_width=True)
+                # 티스토리 썸네일의 경우 실제 크기로 표시
+                if is_tistory:
+                    st.image(thumbnail, width=230)
+                else:
+                    st.image(thumbnail, use_column_width=True)
                 
                 # Download button
                 st.download_button(

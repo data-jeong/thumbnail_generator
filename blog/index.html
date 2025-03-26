@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>썸네일 생성기 프로젝트</title>
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --secondary-color: #1976D2;
+            --text-color: #333;
+            --bg-color: #f5f5f5;
+            --card-bg: #fff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            padding: 3rem 0;
+            background-color: var(--primary-color);
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .card h3 {
+            color: var(--secondary-color);
+            margin: 1.5rem 0 1rem;
+        }
+
+        .card p {
+            margin-bottom: 1rem;
+        }
+
+        .card ul,
+        .card ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .card li {
+            margin-bottom: 0.5rem;
+        }
+
+        .code-block {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+
+        pre {
+            font-family: 'Consolas', monospace;
+            white-space: pre-wrap;
+        }
+
+        .thumbnail-example {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .thumbnail-card {
+            text-align: center;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .thumbnail-card img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary-color);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>썸네일 생성기 프로젝트</h1>
+        <p>티스토리와 인스타그램을 위한 완벽한 썸네일 자동 생성기</p>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>📸 프로젝트 소개</h2>
+            <p>블로그와 SNS 활동을 하면서 가장 번거로운 작업 중 하나가 바로 썸네일 제작입니다. 특히 티스토리(230x300)와 인스타그램(1080x1080)은 서로 다른 비율을 요구하기 때문에,
+                하나의 이미지로 두 플랫폼에 맞는 썸네일을 만드는 것이 쉽지 않습니다.</p>
+            <p>이 프로젝트는 이러한 문제를 해결하기 위해 만들어졌습니다. 원본 이미지를 업로드하면 자동으로 각 플랫폼에 최적화된 썸네일을 생성해줍니다.</p>
+        </div>
+
+        <div class="card">
+            <h2>🎯 주요 기능</h2>
+            <ul>
+                <li>원본 이미지 비율 완벽 보존</li>
+                <li>자동 배경 블러 처리</li>
+                <li>티스토리 (230x300) 최적화</li>
+                <li>인스타그램 (1080x1080) 최적화</li>
+                <li>선택적 그라데이션 효과</li>
+                <li>실시간 미리보기</li>
+                <li>간편한 다운로드</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>🔍 동작 원리</h2>
+            <h3>1. 이미지 처리 로직</h3>
+            <ol>
+                <li>원본 이미지 비율 계산</li>
+                <li>타겟 크기(티스토리/인스타그램)에 맞는 캔버스 생성</li>
+                <li>원본 이미지를 캔버스 중앙에 배치</li>
+                <li>남는 공간을 블러 처리된 배경으로 채움</li>
+                <li>최종 크기로 리사이징</li>
+            </ol>
+
+            <h3>2. 핵심 코드</h3>
+            <div class="code-block">
+                <pre>
+def resize_and_pad_image(image, target_width, target_height):
+    # 1. 비율 계산
+    img_ratio = image.width / image.height
+    target_ratio = target_width / target_height
+    
+    # 2. 캔버스 크기 계산
+    if img_ratio > target_ratio:
+        canvas_width = image.width
+        canvas_height = int(image.width / target_ratio)
+    else:
+        canvas_height = image.height
+        canvas_width = int(image.height * target_ratio)
+    
+    # 3. 이미지 처리 및 합성
+    canvas = Image.new('RGBA', (canvas_width, canvas_height))
+    background = create_blurred_background(image, canvas_width, canvas_height)
+    final_img = composite_images(canvas, background, image)
+    
+    # 4. 최종 리사이징
+    return final_img.resize((target_width, target_height))</pre>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🚀 배포 방법</h2>
+            <h3>Streamlit Cloud 배포 과정</h3>
+            <ol>
+                <li>GitHub에 코드 푸시</li>
+                <li>Streamlit Cloud (https://streamlit.io) 접속</li>
+                <li>"New app" 클릭</li>
+                <li>GitHub 저장소 선택</li>
+                <li>메인 파일 경로 지정 (app.py)</li>
+                <li>Deploy 클릭</li>
+            </ol>
+            <p>현재 앱은 다음 주소에서 사용 가능합니다:</p>
+            <p><a href="https://thumbnailgeneratorgit-ntjr24tcridbuq4jqxejpo.streamlit.app/" class="btn"
+                    target="_blank">썸네일 생성기 사용하기</a></p>
+        </div>
+
+        <div class="card">
+            <h2>💡 사용 방법</h2>
+            <ol>
+                <li>웹사이트 접속</li>
+                <li>플랫폼 선택 (티스토리/인스타그램)</li>
+                <li>이미지 업로드</li>
+                <li>그라데이션 효과 선택 (옵션)</li>
+                <li>"썸네일 생성" 버튼 클릭</li>
+                <li>결과 확인 및 다운로드</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <h2>🛠️ 기술 스택</h2>
+            <ul>
+                <li>Python 3.8+</li>
+                <li>Streamlit - 웹 인터페이스</li>
+                <li>Pillow (PIL) - 이미지 처리</li>
+                <li>NumPy - 배열 처리</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>📝 프로젝트 구조</h2>
+            <div class="code-block">
+                <pre>
+thumbnail_generator/
+├── app.py           # 메인 애플리케이션
+├── requirements.txt # 의존성 목록
+├── README.md        # 프로젝트 문서
+└── .gitignore      # Git 제외 파일</pre>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

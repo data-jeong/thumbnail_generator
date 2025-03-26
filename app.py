@@ -68,7 +68,7 @@ def resize_for_target(image, target_width, target_height):
     
     return image.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
-def resize_and_pad_image(image, target_width, target_height, is_tistory=False):
+def resize_and_pad_image(image, target_width, target_height):
     """이미지 리사이징 및 패딩 처리"""
     # Convert image to RGBA
     image = image.convert('RGBA')
@@ -113,15 +113,15 @@ def resize_and_pad_image(image, target_width, target_height, is_tistory=False):
     
     return final_img
 
-def create_thumbnail(uploaded_image, width, height, add_gradient=True, is_tistory=False):
+def create_thumbnail(uploaded_image, width, height, add_gradient=True):
     """썸네일 생성"""
     if uploaded_image:
         img = Image.open(uploaded_image)
-        img = resize_and_pad_image(img, width, height, is_tistory)
+        img = resize_and_pad_image(img, width, height)
     else:
         img = Image.new('RGBA', (width, height), (255, 255, 255, 255))
     
-    if add_gradient and not is_tistory:  # 티스토리 썸네일에는 그라데이션 효과 제외
+    if add_gradient:  # 모든 썸네일에 그라데이션 효과 적용
         gradient = np.array([
             [
                 (33 - int(33 * y/height), 150 - int(50 * y/height), 243 - int(83 * y/height), int(100 * (1 - y/height)))
@@ -158,13 +158,12 @@ def main():
                 st.error("이미지를 업로드해주세요!")
                 return
                 
-            is_tistory = platform.startswith("TISTORY")
-            if is_tistory:
+            if platform.startswith("TISTORY"):
                 width, height = 230, 300
             else:  # Instagram
                 width, height = 1080, 1080
                 
-            thumbnail = create_thumbnail(uploaded_file, width, height, add_gradient, is_tistory)
+            thumbnail = create_thumbnail(uploaded_file, width, height, add_gradient)
             
             # Convert to bytes
             img_bytes = io.BytesIO()
@@ -172,13 +171,13 @@ def main():
             
             # Generate filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            platform_name = "tistory" if is_tistory else "instagram"
+            platform_name = "tistory" if platform.startswith("TISTORY") else "instagram"
             filename = f"thumbnail_{platform_name}_{timestamp}.png"
             
             with col2:
                 st.subheader("생성된 썸네일")
                 # 티스토리 썸네일의 경우 실제 크기로 표시
-                if is_tistory:
+                if platform.startswith("TISTORY"):
                     st.image(thumbnail, width=230)
                 else:
                     st.image(thumbnail, use_column_width=True)

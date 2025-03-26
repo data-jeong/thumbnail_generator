@@ -73,7 +73,7 @@ def resize_and_pad_image(image, target_width, target_height, is_tistory=False):
     # Convert image to RGBA
     image = image.convert('RGBA')
     
-    # 먼저 이미지를 적절한 크기로 리사이즈
+    # 이미지 비율 계산
     img_ratio = image.width / image.height
     target_ratio = target_width / target_height
     
@@ -88,39 +88,30 @@ def resize_and_pad_image(image, target_width, target_height, is_tistory=False):
             new_width = int(new_height * img_ratio)
         image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
     
-    if is_tistory:
-        # 티스토리 썸네일용 최적화
-        # 1. 원본 이미지를 타겟 크기에 맞게 리사이즈 (비율 유지)
-        resized_img = resize_for_target(image, target_width, target_height)
-        
-        # 2. 배경 이미지 생성
-        background = create_background(resized_img, target_width, target_height)
-        
-        # 3. 리사이즈된 이미지를 중앙에 배치
-        paste_x = (target_width - resized_img.width) // 2
-        paste_y = (target_height - resized_img.height) // 2
-        
-        # 4. 배경과 이미지 합성
-        final_img = background.copy()
-        final_img.paste(resized_img, (paste_x, paste_y), resized_img)
-        
-        return final_img
+    # 타겟 크기에 맞게 이미지 리사이즈 (이미지가 온전히 보이도록)
+    if img_ratio > target_ratio:
+        # 이미지가 더 넓은 경우
+        new_width = target_width
+        new_height = int(target_width / img_ratio)
     else:
-        # 인스타그램 등 다른 형식
-        if img_ratio > target_ratio:
-            new_height = int(target_width / img_ratio)
-            resized_img = image.resize((target_width, new_height), Image.Resampling.LANCZOS)
-            padding = (target_height - new_height) // 2
-            background = create_background(resized_img, target_width, target_height)
-            background.paste(resized_img, (0, padding), resized_img)
-            return background
-        else:
-            new_width = int(target_height * img_ratio)
-            resized_img = image.resize((new_width, target_height), Image.Resampling.LANCZOS)
-            padding = (target_width - new_width) // 2
-            background = create_background(resized_img, target_width, target_height)
-            background.paste(resized_img, (padding, 0), resized_img)
-            return background
+        # 이미지가 더 긴 경우
+        new_height = target_height
+        new_width = int(target_height * img_ratio)
+    
+    resized_img = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    
+    # 배경 이미지 생성
+    background = create_background(image, target_width, target_height)
+    
+    # 리사이즈된 이미지를 중앙에 배치
+    paste_x = (target_width - new_width) // 2
+    paste_y = (target_height - new_height) // 2
+    
+    # 배경과 이미지 합성
+    final_img = background.copy()
+    final_img.paste(resized_img, (paste_x, paste_y), resized_img)
+    
+    return final_img
 
 def create_thumbnail(uploaded_image, width, height, add_gradient=True, is_tistory=False):
     """썸네일 생성"""

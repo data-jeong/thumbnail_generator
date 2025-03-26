@@ -73,13 +73,28 @@ def resize_and_pad_image(image, target_width, target_height, is_tistory=False):
     # Convert image to RGBA
     image = image.convert('RGBA')
     
+    # 먼저 이미지를 적절한 크기로 리사이즈
+    img_ratio = image.width / image.height
+    target_ratio = target_width / target_height
+    
+    # 이미지가 너무 큰 경우 먼저 적절한 크기로 리사이즈
+    max_dimension = max(target_width, target_height) * 2  # 타겟 크기의 2배까지만 허용
+    if image.width > max_dimension or image.height > max_dimension:
+        if image.width > image.height:
+            new_width = max_dimension
+            new_height = int(new_width / img_ratio)
+        else:
+            new_height = max_dimension
+            new_width = int(new_height * img_ratio)
+        image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    
     if is_tistory:
         # 티스토리 썸네일용 최적화
-        # 1. 배경 이미지 생성
-        background = create_background(image, target_width, target_height)
-        
-        # 2. 원본 이미지 리사이즈 (비율 유지)
+        # 1. 원본 이미지를 타겟 크기에 맞게 리사이즈 (비율 유지)
         resized_img = resize_for_target(image, target_width, target_height)
+        
+        # 2. 배경 이미지 생성
+        background = create_background(resized_img, target_width, target_height)
         
         # 3. 리사이즈된 이미지를 중앙에 배치
         paste_x = (target_width - resized_img.width) // 2
@@ -92,21 +107,18 @@ def resize_and_pad_image(image, target_width, target_height, is_tistory=False):
         return final_img
     else:
         # 인스타그램 등 다른 형식
-        img_ratio = image.width / image.height
-        target_ratio = target_width / target_height
-        
         if img_ratio > target_ratio:
             new_height = int(target_width / img_ratio)
             resized_img = image.resize((target_width, new_height), Image.Resampling.LANCZOS)
             padding = (target_height - new_height) // 2
-            background = create_background(image, target_width, target_height)
+            background = create_background(resized_img, target_width, target_height)
             background.paste(resized_img, (0, padding), resized_img)
             return background
         else:
             new_width = int(target_height * img_ratio)
             resized_img = image.resize((new_width, target_height), Image.Resampling.LANCZOS)
             padding = (target_width - new_width) // 2
-            background = create_background(image, target_width, target_height)
+            background = create_background(resized_img, target_width, target_height)
             background.paste(resized_img, (padding, 0), resized_img)
             return background
 

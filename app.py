@@ -73,43 +73,44 @@ def resize_and_pad_image(image, target_width, target_height):
     # Convert image to RGBA
     image = image.convert('RGBA')
     
-    # 이미지 비율 계산
+    # 1. 원본 이미지 비율 계산
     img_ratio = image.width / image.height
     target_ratio = target_width / target_height
     
-    # 이미지가 너무 큰 경우 먼저 적절한 크기로 리사이즈
-    max_dimension = max(target_width, target_height) * 2  # 타겟 크기의 2배까지만 허용
-    if image.width > max_dimension or image.height > max_dimension:
-        if image.width > image.height:
-            new_width = max_dimension
-            new_height = int(new_width / img_ratio)
-        else:
-            new_height = max_dimension
-            new_width = int(new_height * img_ratio)
-        image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-    
-    # 타겟 크기에 맞게 이미지 리사이즈 (이미지가 온전히 보이도록)
+    # 2. 패딩이 포함된 캔버스 크기 계산
     if img_ratio > target_ratio:
-        # 이미지가 더 넓은 경우
-        new_width = target_width
-        new_height = int(target_width / img_ratio)
+        # 이미지가 더 넓은 경우, 높이를 늘려서 맞춤
+        canvas_width = image.width
+        canvas_height = int(image.width / target_ratio)
     else:
-        # 이미지가 더 긴 경우
-        new_height = target_height
-        new_width = int(target_height * img_ratio)
+        # 이미지가 더 긴 경우, 너비를 늘려서 맞춤
+        canvas_height = image.height
+        canvas_width = int(image.height * target_ratio)
     
-    resized_img = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    # 3. 흰색 배경의 캔버스 생성
+    canvas = Image.new('RGBA', (canvas_width, canvas_height), (255, 255, 255, 0))
     
-    # 배경 이미지 생성
-    background = create_background(image, target_width, target_height)
+    # 4. 원본 이미지를 캔버스 중앙에 배치
+    paste_x = (canvas_width - image.width) // 2
+    paste_y = (canvas_height - image.height) // 2
+    canvas.paste(image, (paste_x, paste_y), image)
     
-    # 리사이즈된 이미지를 중앙에 배치
-    paste_x = (target_width - new_width) // 2
-    paste_y = (target_height - new_height) // 2
+    # 5. 배경 이미지 생성 (블러 처리)
+    background = image.copy()
+    background = background.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
+    for _ in range(3):
+        background = background.filter(ImageFilter.GaussianBlur(radius=10))
     
-    # 배경과 이미지 합성
+    # 배경 이미지의 밝기 조정
+    enhancer = ImageEnhance.Brightness(background)
+    background = enhancer.enhance(0.5)  # 50% 어둡게
+    
+    # 6. 캔버스와 배경 합성
     final_img = background.copy()
-    final_img.paste(resized_img, (paste_x, paste_y), resized_img)
+    final_img.paste(canvas, (0, 0), canvas)
+    
+    # 7. 최종 타겟 크기로 리사이즈
+    final_img = final_img.resize((target_width, target_height), Image.Resampling.LANCZOS)
     
     return final_img
 
